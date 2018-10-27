@@ -6,10 +6,6 @@
 
 #include "BluefruitConfig.h"
 
-#if SOFTWARE_SERIAL_AVAILABLE
-  #include <SoftwareSerial.h>
-#endif
-
 #define FACTORYRESET_ENABLE         0
 #define MINIMUM_FIRMWARE_VERSION    "0.6.6"
 
