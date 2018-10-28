@@ -78,6 +78,7 @@ void setup(void)
     error(F("Couldn't reset??"));
   }
 
+  Serial.println(F("Ready to go!"));
   Serial.println();
 }
 
