@@ -157,7 +157,7 @@ static void sendButtons(void)
   for (i = 0; i < NUM_BUTTONS; ++i)
   {
     ble.print(F("-"));
-    ble.print(buttons[i].pressed ? buttons[i].keycode : "00");
+    ble.print(buttons[i].pressed ? buttons[i].keycode : F("00"));
   }
   ble.println();
   ble.waitForOK();
