@@ -151,6 +151,8 @@ static void readButtons(void)
 
 static void sendButtons(void)
 {
+  int i;
+  
   ble.print(F("AT+BleKeyboardCode=00-00"));
   for (i = 0; i < NUM_BUTTONS; ++i)
   {
