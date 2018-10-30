@@ -16,7 +16,7 @@ typedef struct
 {
   Adafruit_FreeTouch qt;
   int thresh;
-  const char* keycode;
+  const __FlashStringHelper* keycode;
   uint8_t pressed;
   
 } gameboyButton_t;
