@@ -11,13 +11,19 @@
 #define MINIMUM_FIRMWARE_VERSION    "0.6.6"
 #define MODE_LED_BEHAVIOUR          "DISABLE"
 #define NUM_BUTTONS                 5
+#define OVERSAMPLE_AMOUNT           OVERSAMPLE_1
+#define SERIES_RESISTOR             RESISTOR_50K
+#define FREQ_MODE                   FREQ_MODE_NONE
+#define DEBOUNCE_DELAY              30
 
 typedef struct
 {
   Adafruit_FreeTouch qt;
+  uint64_t lastDebounceTime;
   int thresh;
   const __FlashStringHelper* keycode;
   uint8_t pressed;
+  uint8_t prevState;
   
 } gameboyButton_t;
 
@@ -31,6 +37,8 @@ static void error(void);
 void setup(void)
 {
   int i;
+
+//  while (!Serial);
   
   /* LED for blinking when there's an error */
   pinMode(LED_BUILTIN, OUTPUT);
@@ -39,34 +47,29 @@ void setup(void)
   memset(buttons, 0x00, sizeof(buttons));
 
   /* L (L) */
-  buttons[0].qt = Adafruit_FreeTouch(A1, OVERSAMPLE_4, RESISTOR_50K, FREQ_MODE_NONE);
+  buttons[0].qt = Adafruit_FreeTouch(A1, OVERSAMPLE_AMOUNT, SERIES_RESISTOR, FREQ_MODE);
   buttons[0].thresh = 500;
   buttons[0].keycode = F("0F");
-  buttons[0].pressed = 0;
 
   /* Left (A) */
-  buttons[1].qt = Adafruit_FreeTouch(A2, OVERSAMPLE_4, RESISTOR_50K, FREQ_MODE_NONE);
+  buttons[1].qt = Adafruit_FreeTouch(A2, OVERSAMPLE_AMOUNT, SERIES_RESISTOR, FREQ_MODE);
   buttons[1].thresh = 500;
   buttons[1].keycode = F("04");
-  buttons[1].pressed = 0;
 
   /* Up (W) */
-  buttons[2].qt = Adafruit_FreeTouch(A3, OVERSAMPLE_4, RESISTOR_50K, FREQ_MODE_NONE);
+  buttons[2].qt = Adafruit_FreeTouch(A3, OVERSAMPLE_AMOUNT, SERIES_RESISTOR, FREQ_MODE);
   buttons[2].thresh = 500;
   buttons[2].keycode = F("1A");
-  buttons[2].pressed = 0;
 
   /* Right (D) */
-  buttons[3].qt = Adafruit_FreeTouch(A4, OVERSAMPLE_4, RESISTOR_50K, FREQ_MODE_NONE);
+  buttons[3].qt = Adafruit_FreeTouch(A4, OVERSAMPLE_AMOUNT, SERIES_RESISTOR, FREQ_MODE);
   buttons[3].thresh = 500;
   buttons[3].keycode = F("07");
-  buttons[3].pressed = 0;
 
   /* Down (S) */
-  buttons[4].qt = Adafruit_FreeTouch(A5, OVERSAMPLE_4, RESISTOR_50K, FREQ_MODE_NONE);
+  buttons[4].qt = Adafruit_FreeTouch(A5, OVERSAMPLE_AMOUNT, SERIES_RESISTOR, FREQ_MODE);
   buttons[4].thresh = 500;
   buttons[4].keycode = F("16");
-  buttons[4].pressed = 0;
 
   for (i = 0; i < NUM_BUTTONS; ++i)
   {
@@ -138,14 +141,23 @@ void loop(void)
 static void readButtons(void)
 {
   int i, result;
+  uint8_t newState;
 
   for (i = 0; i < NUM_BUTTONS; ++i)
   {
+    newState = buttons[i].prevState;
     result = buttons[i].qt.measure();
     if (result > buttons[i].thresh)
-      buttons[i].pressed = 1;
+      newState = 1;
     else if (result > 0)
-      buttons[i].pressed = 0;
+      newState = 0;
+
+    if (newState != buttons[i].prevState)
+      buttons[i].lastDebounceTime = millis();
+    if (millis() - buttons[i].lastDebounceTime > DEBOUNCE_DELAY)
+      buttons[i].pressed = newState;
+
+    buttons[i].prevState = newState;
   }
 }
 
@@ -154,13 +166,23 @@ static void sendButtons(void)
   int i;
   
   ble.print(F("AT+BleKeyboardCode=00-00"));
+//  Serial.print(F("AT+BleKeyboardCode=00-00"));
   for (i = 0; i < NUM_BUTTONS; ++i)
   {
-    ble.print(F("-"));
-    ble.print(buttons[i].pressed ? buttons[i].keycode : F("00"));
+    if (buttons[i].pressed)
+    {
+      ble.print(F("-"));
+      ble.print(buttons[i].keycode);
+
+//      Serial.print(F("-"));
+//      Serial.print(buttons[i].keycode);
+    }
   }
   ble.println();
+//  Serial.println();
+  
   ble.waitForOK();
+//  Serial.println(F("OK!"));
 }
 
 static void error(const __FlashStringHelper*err)
